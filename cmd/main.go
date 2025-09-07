@@ -9,6 +9,11 @@ import (
 )
 
 func main() {
+	_, err := utils.NewPool(utils.Envs.DB)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	server := api.NewAPIServer(
 		fmt.Sprintf("%s:%s", utils.Envs.PublicHost, utils.Envs.Port), 
 		nil,
