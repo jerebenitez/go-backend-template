@@ -23,13 +23,25 @@ src/
 ├─ sevices/
 │  ├─ auth/
 │  │  ├─ routes.go
-│  │  ├─ repository.go
+│  │  ├─ handlers.go
  ```
  There are probably a lot of things to improve on this. I'm open to all critiques. I am, however, going to move forward with this.
  5. Testing. I've never managed to settle on a testing framework that works for me. I hate mocking things, and I like TDD only as an exploratory tool when I'm not sure how to build something (even then, it's more a matter of building some tests to see if requirements are met, does testing that a summing function returns 2+2=4, 2+0=2 and so on and so forth really give you meaningful information?). The testing "framework" I've reached is using pytest for "integration" tests (i.e. testing that endpoints return what they should return. You could call these system tests I guess, but I don't care much for semantics) and using go for unit tests. I'll be also following ThePrimeagen advice here, since it's the one that most closely ressembles what I believe (this time you'll have to find the video on your own, tho): if I want to test something, I'll pull that out in a function and test that specifically. If I have to mock something, then I'm probably doing something wrong.
 
-With that out of the way, let's get building
-
 # 1. Configuring Things
 
-I believe that the first step should always be to get something working. As such, I'll implement a simple endpoint that connects to a database and stores/retrieves things from it. This will be the stepping stone on which I'll later build the auth system.
+The first step should always be to get something working. As such, I implemented a simple endpoint that connected to a database and stored to/retrieved a primordial version of users from it.
+
+With this, came the first two external dependencies:
+- [pgx](https://pkg.go.dev/github.com/jackc/pgx/v5) to connect to the database (I chose to go with postgres because it's the one I've used the most before. This, however, introduced two indirect dependencies which I don't feel that comfortable: having to run a docker container with a postgres database and pgadmin locally. I'll probably optimize this away in the future, but for now, it works)
+- [godotenv/autoload](https://github.com/joho/godotenv/autoload) to load the `.env` file with config options. 
+
+# References
+
+- [Complete Backend API in Golang (JWT, MySQL & Tests)](https://www.youtube.com/watch?v=7VLmLOiQ3ck)
+- [Getting Started with PostgreSQL in Go using PGX](https://betterstack.com/community/guides/scaling-go/postgresql-pgx-golang/)
+
+## Packages
+
+- [pgx](https://pkg.go.dev/github.com/jackc/pgx/v5)
+
