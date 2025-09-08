@@ -8,6 +8,7 @@ import (
 
 type IUserRepository interface {
 	GetAllUsers() ([]User, error)
+	CreateNewUser(User) (User, error)
 }
 
 type UserService struct {
@@ -27,7 +28,8 @@ func (s *UserService) RegisteredServices() map[string]HandlerFunc {
 }
 
 func (s *UserService) GetUsers(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
+	switch method := r.Method; method {
+	case http.MethodGet:
 		users, err := s.repo.GetAllUsers()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -38,9 +40,29 @@ func (s *UserService) GetUsers(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+	case http.MethodPost:
+		var user User
+		if err := utils.ParseJSON(r, &user); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 
-		return
+		if err := ValidateUser(user); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		newUser, err := s.repo.CreateNewUser(user)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if err := utils.WriteJSON(w, 200, newUser); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	default:
+		http.NotFound(w, r)
 	}
-
-	http.NotFound(w, r)
 }

@@ -19,7 +19,7 @@ func NewUserRepository(pool *pgxpool.Pool, ctx *context.Context) *UserRepository
 	}
 }
 
-func (r UserRepository) GetAllUsers() ([]User, error) {
+func (r *UserRepository) GetAllUsers() ([]User, error) {
 	sql := `SELECT * FROM users`
 
 	rows, err := r.pool.Query(*r.ctx, sql)
@@ -50,4 +50,27 @@ func (r UserRepository) GetAllUsers() ([]User, error) {
 	}
 
 	return users, nil
+}
+
+func (r *UserRepository) CreateNewUser(user User) (User, error) {
+	sql := `
+		INSERT INTO users(username, email)
+		VALUES ($1, $2)
+		RETURNING *
+	`
+
+	var newUser User
+	err := r.pool.QueryRow(*r.ctx, sql, user.UserName, user.Email).Scan(
+		&newUser.Id,
+		&newUser.UserName,
+		&newUser.Email,
+		&newUser.IsVerified,
+		&newUser.CreatedAt,
+		&newUser.UpdatedAt,
+	)
+	if err != nil {
+		return User{}, fmt.Errorf("error creating user: %w", err)
+	}
+
+	return newUser, nil
 }
