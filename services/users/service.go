@@ -25,66 +25,59 @@ func NewUserService(repo IUserRepository) *UserService {
 
 func (s *UserService) RegisteredServices() map[string]HandlerFunc {
 	return map[string]HandlerFunc{
-		"/": s.GetUsers,
-		"/{id}": s.DeleteUser,
+		"GET /": s.GetUsers,
+		"POST /": s.CreateUser,
+		"DELETE /{id}": s.DeleteUser,
+	}
+}
+
+func (s *UserService) CreateUser(w http.ResponseWriter, r *http.Request) {
+	var user User
+	if err := utils.ParseJSON(r, &user); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := ValidateUser(user); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	newUser, err := s.repo.CreateNewUser(user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := utils.WriteJSON(w, 200, newUser); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 }
 
 func (s *UserService) GetUsers(w http.ResponseWriter, r *http.Request) {
-	switch method := r.Method; method {
-	case http.MethodGet:
-		users, err := s.repo.GetAllUsers()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+	users, err := s.repo.GetAllUsers()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-		if err := utils.WriteJSON(w, 200, users); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	case http.MethodPost:
-		var user User
-		if err := utils.ParseJSON(r, &user); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		if err := ValidateUser(user); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		newUser, err := s.repo.CreateNewUser(user)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		if err := utils.WriteJSON(w, 200, newUser); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	default:
-		http.NotFound(w, r)
+	if err := utils.WriteJSON(w, 200, users); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 }
 
 func (s *UserService) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	switch method := r.Method; method {
-	case http.MethodDelete:
-		id := r.PathValue("id")
+	id := r.PathValue("id")
 
-		if err := s.repo.DeleteUser(id); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+	if err := s.repo.DeleteUser(id); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-		if err := utils.WriteJSON(w, 200, fmt.Sprintf("User %s deleted!", id)); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	default:
-		http.NotFound(w, r)
+	if err := utils.WriteJSON(w, 200, fmt.Sprintf("User %s deleted!", id)); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 }
