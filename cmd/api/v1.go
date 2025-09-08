@@ -1,34 +1,39 @@
 package api
 
 import (
+	"context"
 	"log"
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jerebenitez/go-backend-template/services/users"
 )
 
 type APIServer struct {
 	addr string
-	db *pgxpool.Pool
+	pool *pgxpool.Pool
+	ctx  *context.Context
 }
 
-func NewAPIServer(addr string, db *pgxpool.Pool) *APIServer {
+func NewAPIServer(addr string, pool *pgxpool.Pool, ctx *context.Context) *APIServer {
 	return &APIServer{
 		addr: addr,
-		db: db,
+		pool: pool,
+		ctx: ctx,
 	}
 }
 
 func (s *APIServer) Run() error {
 	router := http.NewServeMux()
-	subrouter := http.NewServeMux()
 
 	// Register routes for each service here:
-	// authHandler := auth.NewHandler()
-	// authHandler.RegisterRoutes(subrouter)
+	urepo := users.NewUserRepository(s.pool, s.ctx)
+	uservice := users.NewUserService(urepo)
+	userHandler := users.NewUserHandler(uservice)
+	userHandler.RegisterRoutes(router)
 
-	// This can be handled by nginx, so it might not be needed
-	router.Handle("/api/v1/", http.StripPrefix("/api/v1", subrouter))
+	// This can be handled by nginx
+	//router.Handle("/api/v1/", http.StripPrefix("/api/v1", subrouter))
 
 	log.Println("Listening on", s.addr)
 	return http.ListenAndServe(s.addr, router)

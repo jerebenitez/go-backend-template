@@ -14,19 +14,18 @@ type DbConfig struct {
 	Name string
 }
 
-var ctx = context.Background()
-
-func NewPool(cfg DbConfig) (*pgxpool.Pool, error) {
+func NewPool(cfg DbConfig) (*pgxpool.Pool, *context.Context, error) {
+	var ctx = context.Background()
 	pool, err := pgxpool.New(ctx, getConnectionString(cfg))
 	if err != nil {
-		return nil, err	
+		return nil, nil, err	
 	}
 
 	if err := pool.Ping(ctx); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return pool, nil
+	return pool, &ctx, nil
 }
 
 func getConnectionString(cfg DbConfig) string {

@@ -1,15 +1,53 @@
 package users
 
-import "github.com/jackc/pgx/v5/pgxpool"
+import (
+	"context"
+	"fmt"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
 
 type UserRepository struct {
-	conn *pgxpool.Pool
+	pool *pgxpool.Pool
+	ctx  *context.Context
 }
 
-func NewUserRepository(conn *pgxpool.Pool) *UserRepository {
+func NewUserRepository(pool *pgxpool.Pool, ctx *context.Context) *UserRepository {
 	return &UserRepository{
-		conn: conn,
+		pool: pool,
+		ctx: ctx,
 	}
 }
 
-func (r *UserRepository) GetAllUsers() {}
+func (r UserRepository) GetAllUsers() ([]User, error) {
+	sql := `SELECT * FROM users`
+
+	rows, err := r.pool.Query(*r.ctx, sql)
+	if err != nil {
+		return nil, fmt.Errorf("error querying users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var user User
+		err := rows.Scan(
+			&user.Id,
+			&user.UserName,
+			&user.Email,
+			&user.IsVerified,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning user: %w", err)
+		}
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating user rows: %w", err)
+	}
+
+	return users, nil
+}
