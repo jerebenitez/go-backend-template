@@ -1,6 +1,7 @@
 package users
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/jerebenitez/go-backend-template/utils"
@@ -9,6 +10,7 @@ import (
 type IUserRepository interface {
 	GetAllUsers() ([]User, error)
 	CreateNewUser(User) (User, error)
+	DeleteUser(string) error
 }
 
 type UserService struct {
@@ -24,6 +26,7 @@ func NewUserService(repo IUserRepository) *UserService {
 func (s *UserService) RegisteredServices() map[string]HandlerFunc {
 	return map[string]HandlerFunc{
 		"/": s.GetUsers,
+		"/{id}": s.DeleteUser,
 	}
 }
 
@@ -59,6 +62,25 @@ func (s *UserService) GetUsers(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := utils.WriteJSON(w, 200, newUser); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func (s *UserService) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	switch method := r.Method; method {
+	case http.MethodDelete:
+		id := r.PathValue("id")
+
+		if err := s.repo.DeleteUser(id); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if err := utils.WriteJSON(w, 200, fmt.Sprintf("User %s deleted!", id)); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}

@@ -74,3 +74,16 @@ func (r *UserRepository) CreateNewUser(user User) (User, error) {
 
 	return newUser, nil
 }
+
+func (r *UserRepository) DeleteUser(id string) error {
+	sql := `
+		DELETE FROM users WHERE id = $1
+	`
+
+	_, err := r.pool.Query(*r.ctx, sql, id)
+	if err != nil {
+		return fmt.Errorf("unable to delete user: %w", err)
+	}
+
+	return nil
+}
