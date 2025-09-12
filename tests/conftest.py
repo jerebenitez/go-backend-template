@@ -4,6 +4,7 @@ import time
 import psycopg2
 import pytest
 import requests
+import subprocess
 from testcontainers.postgres import PostgresContainer
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.network import Network
@@ -52,6 +53,14 @@ def server(postgres, network):
         yield base_url
 
 
+def run_migrations(dsn: str):
+    """Call `migrations.py` tool to apply migrations"""
+    subprocess.run(
+        ["python", "../migrations.py", "apply", "--dsn", dsn],
+        check=True
+    )
+
+
 @pytest.fixture(scope="session")
 def initial_db(postgres):
     """Create db template with migrations and seeds"""
@@ -67,7 +76,9 @@ def initial_db(postgres):
     cur.close()
     conn.close()
 
-    # TODO: apply migrations
+    base_dsn = postgres.get_connection_url().split("/", 1)[0]
+    template_dsn = f"{base_dsn}/{template_name}"
+    run_migrations(template_dsn)
 
     yield template_name
 
