@@ -12,9 +12,13 @@ API_URL = (
 def test_signup(postgres, server, clean_db):
     salt = bcrypt.gensalt()
     password = "password123".encode("UTF-8")
-    payload = {"email": "test@email.com", "password": bcrypt.hashpw(password, salt)}
+    payload = {
+        "email": "test@email.com",
+        "password": bcrypt.hashpw(password, salt),
+        "salt": salt
+    }
 
-    response = requests.post(f"{API_URL}/auth", json=payload)
+    response = requests.post(f"{API_URL}/users", json=payload)
     assert response.status_code == 201
     assert "id" in response.json()
     assert response.json()["email"] == payload["email"]
