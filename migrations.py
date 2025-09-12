@@ -100,12 +100,13 @@ def apply_migrations(dsn: str, dir: str):
     conn.close()
 
 
-def get_dsn_from_env(dir=".env") -> str:
+def get_dsn_from_env(dir: str) -> str:
     """
     Expected keys: DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
     """
-    env_file = Path(dir)
-    load_dotenv(dotenv_path=env_file)
+    if dir:
+        env_file = Path(dir)
+        load_dotenv(dotenv_path=env_file)
 
     dsn = (
         f"dbname={os.getenv('DB_NAME', 'postgres')} "
@@ -124,7 +125,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if sys.argv[1] == "apply":
-        apply_migrations(get_dsn_from_env(), "db/migrations")
+        if len(sys.argv == 4) and sys.argv[2] == "--dsn":
+            apply_migrations(sys.argv[3], "db/migrations")
+        else:
+            apply_migrations(get_dsn_from_env(".env"), "db/migrations")
     elif sys.argv[1] == "new" and len(sys.argv) == 3:
         create_new_migration(sys.argv[2], "db/migrations/")
     else:
