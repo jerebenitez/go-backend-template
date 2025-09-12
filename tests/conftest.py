@@ -1,72 +1,78 @@
-import os
-import uuid
+import subprocess
 import time
+import uuid
+
 import psycopg2
 import pytest
 import requests
-import subprocess
-from testcontainers.postgres import PostgresContainer
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.network import Network
+from testcontainers.postgres import PostgresContainer
 
 
 @pytest.fixture(scope="session")
 def network():
-    with Network() as net:
-        yield net
+    with Network() as network:
+        yield network
 
 
 @pytest.fixture(scope="session")
 def postgres(network):
     """Init Postgres 16 database"""
     with PostgresContainer("postgres:16") as pg:
-        pg.with_network(network).with_network_aliases("db")
+        pg.with_network(network)
+        pg.with_network_aliases("db")
+        pg.with_name("db")
+
         pg.start()
-        os.environ["DB_DSN"] = pg.get_connection_url()
 
         yield pg
 
 
 @pytest.fixture(scope="session")
-def server(postgres, network):
+def server(network, postgres):
     """Init server, connect to database"""
-    db_url = f"postgres://{postgres.username}:{postgres.password}@db:{postgres.port}/{postgres.dbname}?sslmode=disable"
+    port = postgres.get_exposed_port(postgres.port)
+    db_url = f"postgresql://{postgres.username}:{postgres.password}@db:5432/{postgres.dbname}"
 
-    with DockerContainer("") as container:
-        container.with_network(network) \
-                .with_env("DB_DSN", db_url) \
-                .with_exposed_ports(5000) \
-                .start()
+    with DockerContainer("server:latest") as container:
+        container.with_network(network).with_env("DB_DSN", db_url)
+        container.with_exposed_ports(5000)
+
+        container.start()
+
         host = container.get_container_host_ip()
         port = container.get_exposed_port(5000)
         base_url = f"http://{host}:{port}"
 
-        for _ in range(30):
+        for i in range(30):
             try:
-                requests.get(f"{base_url}/health-check")
-                break
-            except Exception:
-                time.Sleep(1)
+                r = requests.get(f"{base_url}/health-check")
+                if r.status_code == 200:
+                    print(f"Server ready at {base_url}")
+                    break
+            except requests.ConnectionError as e:
+                print(f"Attempt {i+1}: server not ready yet ({e})")
+                print(f"Server logs: {container.get_logs()}")
+                time.sleep(1)
         else:
             raise RuntimeError("Server failed to start")
 
-        yield base_url
+        yield container, base_url
 
 
 def run_migrations(dsn: str):
     """Call `migrations.py` tool to apply migrations"""
-    subprocess.run(
-        ["python", "../migrations.py", "apply", "--dsn", dsn],
-        check=True
-    )
+    subprocess.run(["python", "./migrations.py", "apply", "--dsn", dsn], check=True)
 
 
 @pytest.fixture(scope="session")
 def initial_db(postgres):
     """Create db template with migrations and seeds"""
-    template_name = "initialDb"
+    template_name = "initialdb"
+    connection_url = postgres.get_connection_url(driver=None)
 
-    conn = psycopg2.connect(postgres.get_connection_url())
+    conn = psycopg2.connect(connection_url)
     conn.autocommit = True
     cur = conn.cursor()
 
@@ -76,7 +82,7 @@ def initial_db(postgres):
     cur.close()
     conn.close()
 
-    base_dsn = postgres.get_connection_url().split("/", 1)[0]
+    base_dsn = connection_url.rsplit("/", 1)[0]
     template_dsn = f"{base_dsn}/{template_name}"
     run_migrations(template_dsn)
 
@@ -86,15 +92,17 @@ def initial_db(postgres):
 @pytest.fixture
 def clean_db(postgres, initial_db):
     """Clone initial_db to create a fesh db for each test"""
+    connection_url = postgres.get_connection_url(driver=None)
     db_name = f"test_{uuid.uuid4().hex[:8]}"
-    conn = psycopg2.connect(postgres.get_connection_url())
+
+    conn = psycopg2.connect(connection_url)
     conn.autocommit = True
     cur = conn.cursor()
 
-    cur.execute(f'CREATE DATABASE "{db_name} WITH TEMPLATE {initial_db}')
+    cur.execute(f'CREATE DATABASE "{db_name}" WITH TEMPLATE {initial_db}')
 
     cur.close()
     conn.close()
 
-    dsn = postgres.get_connection_url().rsplit("/", 1)[0] + f"/{db_name}"
+    dsn = connection_url.rsplit("/", 1)[0] + f"/{db_name}"
     yield dsn

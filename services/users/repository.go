@@ -33,8 +33,8 @@ func (r *UserRepository) GetAllUsers() ([]User, error) {
 		var user User
 		err := rows.Scan(
 			&user.Id,
-			&user.UserName,
 			&user.Email,
+			&user.UserName,
 			&user.IsVerified,
 			&user.CreatedAt,
 			&user.UpdatedAt,
@@ -62,8 +62,8 @@ func (r *UserRepository) CreateNewUser(user User) (User, error) {
 	var newUser User
 	err := r.pool.QueryRow(*r.ctx, sql, user.UserName, user.Email).Scan(
 		&newUser.Id,
-		&newUser.UserName,
 		&newUser.Email,
+		&newUser.UserName,
 		&newUser.IsVerified,
 		&newUser.CreatedAt,
 		&newUser.UpdatedAt,

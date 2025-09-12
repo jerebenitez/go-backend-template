@@ -15,7 +15,7 @@ func main() {
 	}
 
 	server := api.NewAPIServer(
-		fmt.Sprintf("%s:%s", utils.Envs.PublicHost, utils.Envs.Port), 
+		fmt.Sprintf("%s:%s", utils.Envs.PublicHost, utils.Envs.Port),
 		pool, ctx,
 	)
 

@@ -1,7 +1,8 @@
 import os
 import sys
-import psycopg2
 from pathlib import Path
+
+import psycopg2
 from dotenv import load_dotenv
 
 
@@ -64,13 +65,15 @@ def apply_migrations(dsn: str, dir: str):
 
     # Ensure migrations table exists, used to track which migrations
     # have been applied
-    cur.execute("""
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS migrations (
-            id SERIAL KEY,
+            id SERIAL PRIMARY KEY,
             ref INTEGER,
             applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    """)
+    """
+    )
     conn.commit()
 
     # Get applied migrations
@@ -78,8 +81,7 @@ def apply_migrations(dsn: str, dir: str):
     applied = {row[0] for row in cur.fetchall()}
 
     migration_files = sorted(
-        migrations_dir.glob("*.sql"),
-        key=lambda f: int(f.stem.split("_")[-1])
+        migrations_dir.glob("*.sql"), key=lambda f: int(f.stem.split("_")[-1])
     )
 
     for f in migration_files:
@@ -125,7 +127,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if sys.argv[1] == "apply":
-        if len(sys.argv == 4) and sys.argv[2] == "--dsn":
+        if len(sys.argv) == 4 and sys.argv[2] == "--dsn":
             apply_migrations(sys.argv[3], "db/migrations")
         else:
             apply_migrations(get_dsn_from_env(".env"), "db/migrations")

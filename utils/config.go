@@ -10,20 +10,21 @@ import (
 
 type Config struct {
 	PublicHost string
-	Port string
-	DB DbConfig
+	Port       string
+	DB         DbConfig
 }
 
 var Envs = initConfig()
 
 func initConfig() Config {
 	return Config{
-		PublicHost: getEnv("HOST", "localhost"),
-		Port: getEnv("PORT", "3333"),
+		PublicHost: getEnv("HOST", ""),
+		Port:       getEnv("PORT", "5000"),
 		DB: DbConfig{
-			User: getEnv("DB_USER", "postgres"),
+			DSN:      getEnv("DB_DSN", ""),
+			User:     getEnv("DB_USER", "postgres"),
 			Password: getEnv("DB_PASSWORD", "admin"),
-			Name: getEnv("DB_NAME", "postgres"),
+			Name:     getEnv("DB_NAME", "postgres"),
 			Path: fmt.Sprintf(
 				"%s:%s",
 				getEnv("DB_HOST", "localhost"),

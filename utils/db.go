@@ -8,10 +8,11 @@ import (
 )
 
 type DbConfig struct {
-	User string
+	User 	 string
 	Password string
-	Path string
-	Name string
+	Path 	 string
+	Name 	 string
+	DSN		 string
 }
 
 func NewPool(cfg DbConfig) (*pgxpool.Pool, *context.Context, error) {
@@ -29,11 +30,15 @@ func NewPool(cfg DbConfig) (*pgxpool.Pool, *context.Context, error) {
 }
 
 func getConnectionString(cfg DbConfig) string {
-	return fmt.Sprintf(
-		"postgres://%s:%s@%s/%s",
-		cfg.User,
-		cfg.Password,
-		cfg.Path,
-		cfg.Name,
-	)
+	if cfg.DSN == "" {
+		return fmt.Sprintf(
+			"postgres://%s:%s@%s/%s",
+			cfg.User,
+			cfg.Password,
+			cfg.Path,
+			cfg.Name,
+		)
+	} else {
+		return cfg.DSN
+	}
 }

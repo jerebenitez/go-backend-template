@@ -1,24 +1,23 @@
-import os
 import bcrypt
 import requests
-from dotenv import load_dotenv
-
-load_dotenv()
-API_URL = (
-    f"{os.getenv('HOST', default='localhost')}:{os.getenv('PORT', default='3000')}"
-)
 
 
-def test_signup(postgres, server, clean_db):
+def test_signup(server, clean_db):
     salt = bcrypt.gensalt()
     password = "password123".encode("UTF-8")
+    hased_pwd = bcrypt.hashpw(password, salt)
+
     payload = {
         "email": "test@email.com",
-        "password": bcrypt.hashpw(password, salt),
-        "salt": salt
+        "password": hased_pwd.decode("utf-8", errors="ignore"),
+        "salt": salt.decode("utf-8", errors="ignore"),
     }
 
-    response = requests.post(f"{API_URL}/users", json=payload)
+    try:
+        response = requests.post(f"{server[1]}/users", json=payload)
+    except requests.ConnectionError:
+        print("Server logs:\n", server[0].get_logs())
+        raise
     assert response.status_code == 201
     assert "id" in response.json()
     assert response.json()["email"] == payload["email"]
