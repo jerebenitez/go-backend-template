@@ -6,9 +6,9 @@ By concessions, I mean especifically choosing "hype" libraries/framework, just b
 
  This project is an attempt at fixing that. I intend to implement this backend template doing things the way I like, forcing me to avoid taking the easy road. After careful thought, I've decided this implies:
  1. As little dependencies as possible. I'm using go, claimed to have a really complete stdlib, so I should strive to implement everything possible by hand. I'll be rebuilding a lot of wheels, except in cases where that is either not possible, or straight up dumb. Other than that, I'll strive to use the stdlib and my brain as much as possible. This means no web frameworks, no ORMs, probably no validator libraries (I'll see).
- 2. No AI-generated code. This is both a preparation for future work and, most importantly, a learning experience. AI has little to no use in the latter. I might ask conceptual questions if I'm ever stuck on something, but I won't ask it to generate code for me.
- 3. No premature optimization. I've taken some decisions before based on questions like "what happens if I get 1M uses?" Truth be told, I think I could count the users of the systems I've developed in a single hand. Until I have to deal with scaling issues, I won't optimize for them. Code is maleable and cheap, if I need to change something at a later date because I need to, then I will, but I'll try to waste no time in hypotheticals.
- 4. Code structure: I lost some time thinking about this. Should I go with a clean architecture, to make it easy to change technologies later? Should I use a vertical slice architecture to make it easies to implement new features? I've come to the conclussion (actually [Casey Muratori and ThePrimagen)[https://www.youtube.com/watch?v=DsAclZbP_Us] made me reach it) that this is nothing more than premature optimization. This is a template that I intend to use in multiple projects that will have multiple requirements. If I ever need a pre-defined architecture, I'll refactor things. For now, I'll follow the architecture I know:
+ 2. No AI-generated code. This project is both a preparation for future work and, most importantly, a learning experience. AI has little to no use in the latter. I might ask conceptual questions if I'm ever stuck on something, but I won't ask it to generate code for me.
+ 3. No premature optimization. I've taken some decisions before based on questions like "what happens if I get 1M uses?" Truth be told, I think I could count the users of the systems I've developed in a single hand. Until I have to deal with scaling issues, I won't optimize for them. Code is maleable and cheap, if I need to change something at a later date, then I will, but I'll try to waste no time in hypotheticals.
+ 4. Code structure. I wasted some time thinking about this. Should I go with clean architecture, to make it easy to change technologies later? Should I use a vertical slice architecture to make it easies to implement new features? I've come to the conclussion (actually [Casey Muratori and ThePrimagen](https://www.youtube.com/watch?v=DsAclZbP_Us) made me reach it) that this is nothing more than premature optimization. This is a template that I intend to use in multiple projects that will have multiple requirements. If I ever need a pre-defined architecture, I'll refactor things. For now, I'll follow the architecture I know:
  ```
 src/
 ├─ cmd/
@@ -26,6 +26,7 @@ src/
 │  │  ├─ handlers.go
  ```
  There are probably a lot of things to improve on this. I'm open to all critiques. I am, however, going to move forward with this.
+
  5. Testing. I've never managed to settle on a testing framework that works for me. I hate mocking things, and I like TDD only as an exploratory tool when I'm not sure how to build something (even then, it's more a matter of building some tests to see if requirements are met, does testing that a summing function returns 2+2=4, 2+0=2 and so on and so forth really give you meaningful information?). The testing "framework" I've reached is using pytest for "integration" tests (i.e. testing that endpoints return what they should return. You could call these system tests I guess, but I don't care much for semantics) and using go for unit tests. I'll be also following ThePrimeagen advice here, since it's the one that most closely ressembles what I believe (this time you'll have to find the video on your own, tho): if I want to test something, I'll pull that out in a function and test that specifically. If I have to mock something, then I'm probably doing something wrong.
 
 # 1. Configuring Things
@@ -40,13 +41,36 @@ By about [commit 1c9d3f89](https://github.com/jerebenitez/go-backend-template/co
 
 ## 1.1. Refactoring
 
-After that, I ended up refactoring service so that it knew nothing about `net/http`. It's clearly an early refactoring, adding one extra function call for something that could be achieved in a single function. `service.go` looked a litte better though, considering services now only dealt with business logic and had no knowledge of the underlying package providing the http support (whether it continues to be net/http forever, or if I ever include a framework). `handler.go` did end up "worse" (or, at the very least, longer), but it's the one responsible for most of the http related stuff.
+I ended up refactoring `service.go` so that it knew nothing about `net/http`. It's clearly an early optimization, adding one extra function call for something that could be achieved in a single function. `service.go` looked a litte better though, considering services now only dealt with business logic and had no knowledge of the underlying package providing the http support (whether it continues to be net/http forever, or if I ever replace it with a framework). `handler.go` did end up "worse" (or, at the very least, longer), but now it's the one responsible for most of the http related stuff.
 
 There probably is another refactoring possible, considering all handlers do pretty much the same:
 1. Prepare args for service method
 2. Call service method
 3. Return result
+
 all of them including the corresponding call to `http.Error` on failure; but all the attempts at refactoring it I drafted in my notebook were far too complex for something that could just be copy and pasted (I even thought about having some generic adapters with some reflection and `query:"arg"` in the structs, and at that point I realized I was over-engineering things, dropped everything, and continued.)
+
+# 2. Authentication
+
+## 2.1. Requirements
+
+Unfortunately for me, I want my auth service to have "a lot" of features (it pales in comparisson with pre-made systems, but it still is a lot to do for a single dev). I want it to consist of:
+
+1. Username and password support
+  - [ ] User creation
+  - [ ] Log in
+  - [ ] Email verification
+  - [ ] Password recovery
+  - [ ] Password change
+2. Oauth (Google) support
+  - [ ] User creation
+  - [ ] Log in
+3. Multi-session management
+  - [ ] Log in from multiple devices
+  - [ ] List each active session
+  - [ ] Log out from all sessions
+4. 2FA
+  - [ ] Use authenticator app to add 2FA
 
 # References
 
@@ -56,4 +80,4 @@ all of them including the corresponding call to `http.Error` on failure; but all
 ## Packages
 
 - [pgx](https://pkg.go.dev/github.com/jackc/pgx/v5)
-
+- [net/http](https://pkg.go.dev/net/http)

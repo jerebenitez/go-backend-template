@@ -63,7 +63,7 @@ def server(network, postgres):
 
 def run_migrations(dsn: str):
     """Call `migrations.py` tool to apply migrations"""
-    subprocess.run(["python", "./migrations.py", "apply", "--dsn", dsn], check=True)
+    subprocess.run(["python", "../db/migrations.py", "apply", "--dsn", dsn], check=True)
 
 
 @pytest.fixture(scope="session")
