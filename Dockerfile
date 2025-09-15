@@ -1,6 +1,6 @@
 FROM golang:1.23 AS builder
 WORKDIR /app
-COPY . .
+COPY ./server .
 RUN CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/main.go
 
 FROM alpine:latest
