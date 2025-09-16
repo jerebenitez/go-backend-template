@@ -4,8 +4,11 @@ DOCKER_TAG := latest
 VENV_DIR := .venv
 PYTHON := $(VENV_DIR)/bin/python
 PIP := $(VENV_DIR)/bin/pip
-GO_SOURCES := $(shell find . -name "*.go" -not -path "./vendor/*")
 TEST_DIR := ./tests
+
+GO_SOURCES := $(shell find . -name "*.go" -not -path "./vendor/*")
+BUILD_DIR := build
+SERVER_BINARY := $(BUILD_DIR)/server
 
 # Markers
 DOCKER_MARKER := .docker-built
@@ -16,6 +19,11 @@ DEPS_MARKER := $(VENV_DIR)/.deps-installed
 test: $(DEPS_MARKER)
 	@echo "Running pytest in tests directory..."
 	cd tests && ../$(PYTHON) -m pytest
+
+$(SERVER_BINARY): $(GO_SOURCES) server/go.mod server/go.sum
+	@echo "Building go server..."
+	@mkdir -p $(BUILD_DIR)
+	cd server && go build -o ../$(SERVER_BINARY) ./cmd/main.go
 
 $(DOCKER_MARKER): $(GO_SOURCES) Dockerfile
 	@echo "Building Docker image..."
@@ -38,6 +46,7 @@ clean:
 	@echo "Cleaning up..."
 	rm -rf $(VENV_DIR)
 	rm -f $(DOCKER_MARKER)
+	rm -rf $(BUILD_DIR)
 	docker rmi $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) 2>/dev/null || true
 
 .PHONY: rebuild
