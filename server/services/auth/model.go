@@ -9,19 +9,19 @@ import (
 )
 
 type User struct {
-	Id              string             `json:"id,omitempty"`
-	Email           string             `json:"email,omitempty"`
-	EmailVerified   bool               `json:"emailVerified,omitempty"`
-	EmailVerifiedAt pgtype.Timestamptz `json:"emailVerifiedAt,omitempty"`
-	PasswordHash    string             `json:"passwordHash,omitempty"`
-	IsActive        bool               `json:"isActive,omitempty"`
-	IsSuperuser     bool               `json:"isSuperuser,omitempty"`
 	LastLogin       pgtype.Timestamptz `json:"lastLogin,omitempty"`
-	MfaEnabled      bool               `json:"mfaEnabled,omitempty"`
-	PhoneNumber     string             `json:"phoneNumber,omitempty"`
-	PhoneVerifiedAt pgtype.Timestamptz `json:"phoneVerifiedAt,omitempty"`
-	CreatedAt       pgtype.Timestamptz `json:"createdAt,omitempty"`
 	UpdatedAt       pgtype.Timestamptz `json:"updatedAt,omitempty"`
+	CreatedAt       pgtype.Timestamptz `json:"createdAt,omitempty"`
+	EmailVerifiedAt pgtype.Timestamptz `json:"emailVerifiedAt,omitempty"`
+	PhoneVerifiedAt pgtype.Timestamptz `json:"phoneVerifiedAt,omitempty"`
+	PhoneNumber     string             `json:"phoneNumber,omitempty"`
+	Id              string             `json:"id,omitempty"`
+	PasswordHash    string             `json:"passwordHash,omitempty"`
+	Email           string             `json:"email,omitempty"`
+	IsSuperuser     bool               `json:"isSuperuser,omitempty"`
+	IsActive        bool               `json:"isActive,omitempty"`
+	MfaEnabled      bool               `json:"mfaEnabled,omitempty"`
+	EmailVerified   bool               `json:"emailVerified,omitempty"`
 }
 
 func ValidateUser(u User) error {
