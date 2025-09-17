@@ -18,7 +18,7 @@ DEPS_MARKER := $(VENV_DIR)/.deps-installed
 .PHONY: test
 test: $(DEPS_MARKER)
 	@echo "Running pytest in tests directory..."
-	cd tests && ../$(PYTHON) -m pytest
+	cd $(TEST_DIR) && ../$(PYTHON) -m pytest -s
 
 $(SERVER_BINARY): $(GO_SOURCES) server/go.mod server/go.sum
 	@echo "Building go server..."
@@ -38,7 +38,7 @@ $(VENV_MARKER):
 $(DEPS_MARKER): $(TEST_DIR)/requirements.txt $(VENV_MARKER) $(DOCKER_MARKER)
 	@echo "Installing Python dependencies..."
 	$(PIP) install --upgrade pip
-	$(PIP) install -r ./tests/requirements.txt
+	$(PIP) install -r $(TEST_DIR)/requirements.txt
 	@touch $(DEPS_MARKER)
 
 .PHONY: clean

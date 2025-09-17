@@ -1,4 +1,3 @@
-import subprocess
 import time
 import uuid
 
@@ -29,11 +28,10 @@ def postgres(network):
         yield pg
 
 
-@pytest.fixture(scope="session")
-def server(network, postgres):
+@pytest.fixture()
+def server(network, postgres, clean_db):
     """Init server, connect to database"""
-    port = postgres.get_exposed_port(postgres.port)
-    db_url = f"postgresql://{postgres.username}:{postgres.password}@db:5432/{postgres.dbname}"
+    db_url = f"postgresql://{postgres.username}:{postgres.password}@db:5432/{clean_db}?sslmode=disable"
 
     with DockerContainer("server:latest") as container:
         container.with_network(network).with_env("DB_DSN", db_url)
@@ -49,7 +47,7 @@ def server(network, postgres):
             try:
                 r = requests.get(f"{base_url}/health-check")
                 if r.status_code == 200:
-                    print(f"Server ready at {base_url}")
+                    print("Server ready!")
                     break
             except requests.ConnectionError as e:
                 print(f"Attempt {i+1}: server not ready yet ({e})")
@@ -61,9 +59,41 @@ def server(network, postgres):
         yield container, base_url
 
 
-def run_migrations(dsn: str):
-    """Call `migrations.py` tool to apply migrations"""
-    subprocess.run(["python", "../db/migrations.py", "apply", "--dsn", dsn], check=True)
+def run_migrations(dsn):
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    print(f"Running migrations with DSN: {dsn}")
+    print(f"Current working directory: {os.getcwd()}")
+
+    # Change to the db directory where migrations.py is located
+    db_dir = Path(__file__).parent.parent / "db"  # Adjust this path as needed
+    migrations_script = db_dir / "migrations.py"
+
+    if not migrations_script.exists():
+        raise FileNotFoundError(f"migrations.py not found at {migrations_script}")
+
+    # Run the migrations script from the db directory
+    try:
+        result = subprocess.run(
+            [sys.executable, str(migrations_script), "apply", "--dsn", dsn],
+            cwd=str(db_dir),
+            capture_output=True,
+            text=True,
+        )
+
+        print(f"Migration stdout: {result.stdout}")
+        print(f"Migration stderr: {result.stderr}")
+        print(f"Migration return code: {result.returncode}")
+
+        if result.returncode != 0:
+            raise RuntimeError(f"Migration failed: {result.stderr}")
+
+    except Exception as e:
+        print(f"Migration error: {e}")
+        raise
 
 
 @pytest.fixture(scope="session")
@@ -86,6 +116,17 @@ def initial_db(postgres):
     template_dsn = f"{base_dsn}/{template_name}"
     run_migrations(template_dsn)
 
+    # Verify migrations worked
+    conn = psycopg2.connect(template_dsn)
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
+    )
+    tables = cur.fetchall()
+    print(f"Tables in template database: {tables}")
+    cur.close()
+    conn.close()
+
     yield template_name
 
 
@@ -104,5 +145,4 @@ def clean_db(postgres, initial_db):
     cur.close()
     conn.close()
 
-    dsn = connection_url.rsplit("/", 1)[0] + f"/{db_name}"
-    yield dsn
+    yield db_name

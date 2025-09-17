@@ -20,7 +20,6 @@ COMMIT;
 def print_usage():
     print(
         f"""Usage: {sys.argv[0]} CMD [OPTIONS]
-
 Commands:
 apply\t\tApply existing migrations
 new [name] \tCreate new migration file with 'name' as prefix"""
@@ -29,7 +28,7 @@ new [name] \tCreate new migration file with 'name' as prefix"""
 
 def get_next_migration_number(dir: Path) -> str:
     last_migration = 0
-    for f in dir.glob(".sql"):
+    for f in dir.glob("*.sql"):
         name = f.stem
         try:
             num = int(name.split("_")[-1])
@@ -37,7 +36,6 @@ def get_next_migration_number(dir: Path) -> str:
         except ValueError:
             # Skip files that don't follow the name_####.sql format
             continue
-
     return f"{last_migration+1:04d}"
 
 
@@ -46,8 +44,8 @@ def create_new_migration(name: str, dir: str):
     migrations_dir.mkdir(parents=True, exist_ok=True)
 
     idx = get_next_migration_number(migrations_dir)
-
     migration_file = migrations_dir / f"{name}_{idx}.sql"
+
     if migration_file.exists():
         print(f"Error: migration file {migration_file} already exists!")
         sys.exit(1)
@@ -58,6 +56,14 @@ def create_new_migration(name: str, dir: str):
 
 def apply_migrations(dsn: str, dir: str):
     migrations_dir = Path(dir)
+    print(f"Looking for migrations in: {migrations_dir.absolute()}")
+
+    # Check if directory exists
+    if not migrations_dir.exists():
+        print(
+            f"Error: migrations directory {migrations_dir.absolute()} does not exist!"
+        )
+        return
 
     conn = psycopg2.connect(dsn)
     conn.autocommit = False
@@ -76,7 +82,6 @@ def apply_migrations(dsn: str, dir: str):
     )
     conn.commit()
 
-    # Get applied migrations
     cur.execute("SELECT ref FROM migrations")
     applied = {row[0] for row in cur.fetchall()}
 
@@ -84,19 +89,32 @@ def apply_migrations(dsn: str, dir: str):
         migrations_dir.glob("*.sql"), key=lambda f: int(f.stem.split("_")[-1])
     )
 
+    print(f"Found migration files: {[f.name for f in migration_files]}")
+
+    if not migration_files:
+        print("No migration files found!")
+        cur.close()
+        conn.close()
+        return
+
     for f in migration_files:
         idx = int(f.stem.split("_")[-1])
         if idx in applied:
+            print(f"Ignoring migration {f.name} (already applied)")
             continue
 
         print(f"Applying migration {f.name}")
         sql = f.read_text()
+        print(f"Migration SQL preview: {sql[:200]}...")  # Debug: show first 200 chars
+
         try:
             cur.execute(sql)
             conn.commit()
+            print(f"Successfully applied {f.name}")
         except Exception as e:
             conn.rollback()
             print(f"Failed to apply {f.name}: {e}")
+            break  # Stop on first error
 
     cur.close()
     conn.close()
@@ -109,7 +127,6 @@ def get_dsn_from_env(dir: str) -> str:
     if dir:
         env_file = Path(dir)
         load_dotenv(dotenv_path=env_file)
-
     dsn = (
         f"dbname={os.getenv('DB_NAME', 'postgres')} "
         f"user={os.getenv('DB_USER', 'postgres')} "
@@ -117,7 +134,6 @@ def get_dsn_from_env(dir: str) -> str:
         f"host={os.getenv('DB_HOST', 'localhost')} "
         f"port={os.getenv('DB_PORT', '5432')}"
     )
-
     return dsn
 
 
@@ -128,11 +144,11 @@ if __name__ == "__main__":
 
     if sys.argv[1] == "apply":
         if len(sys.argv) == 4 and sys.argv[2] == "--dsn":
-            apply_migrations(sys.argv[3], "db/migrations")
+            apply_migrations(sys.argv[3], "./migrations")
         else:
-            apply_migrations(get_dsn_from_env(".env"), "db/migrations")
+            apply_migrations(get_dsn_from_env(".env"), "migrations")
     elif sys.argv[1] == "new" and len(sys.argv) == 3:
-        create_new_migration(sys.argv[2], "db/migrations/")
+        create_new_migration(sys.argv[2], "migrations/")
     else:
         print_usage()
         sys.exit(1)

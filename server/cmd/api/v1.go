@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jerebenitez/go-backend-template/services/auth"
 	"github.com/jerebenitez/go-backend-template/utils"
 )
 
@@ -27,10 +28,10 @@ func (s *APIServer) Run() error {
 	router := http.NewServeMux()
 
 	// Register routes for each service here:
-	// urepo := users.NewUserRepository(s.pool, s.ctx)
-	// uservice := users.NewUserService(urepo)
-	// userHandler := users.NewUserHandler(uservice)
-	// userHandler.RegisterRoutes(router)
+	authRepo := auth.NewAuthRepository(s.pool, s.ctx)
+	authService := auth.NewAuthService(authRepo)
+	authHandler := auth.NewAuthHandler(authService)
+	authHandler.RegisterRoutes(router)
 
 	// This can be handled by nginx
 	//router.Handle("/api/v1/", http.StripPrefix("/api/v1", subrouter))
